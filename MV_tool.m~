@@ -362,8 +362,8 @@ for i = 1:length(hAxesOfInterest)
 	aD.htFrameNumbers(handlesMV.Axes == CurrentAxes(i)).String = num2str(currentFrame);
 	aD.hAllImages(aD.hAllAxes == hAxesOfInterest(i)).CData =  squeeze(imageData(:,:,currentFrame));
    
-    % if doing the single current axes, update frame numbers        
     if (aD.hAllAxes == hAxesOfInterest(i))
+        % if doing the single current axes, update the
         aD.hGUI.Frame_Value_edit.String =  num2str(currentFrame);
         Set_Current_Axes(hAxesOfInterest(i));
     end;
@@ -413,15 +413,16 @@ for i = 1:length(hAxesOfInterest)
 		aD.hGUI.Frame_Value_edit.String = num2str(currentFrame);	
 		Set_Current_Axes(hAxesOfInterest(i));
 	end;
-
-    % Objects Exist- update the xdata/ydata for each object
+                
     if ~isempty(aD.ObjectHandles)
         object_data   = getappdata(CurrentAxes(i), 'Objects');
+        
+        % Objects Exist- update the xdata/ydata for each object 
         Update_Object(object_data, aD.ObjectHandles{ hAxesOfInterest(i) == aD.hCurrentAxes,1},currentFrame);
     end;
 
 end;
-figure(aD.hFigMV);
+figure(aD.);
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -432,18 +433,14 @@ function Set_Frame_Limit
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 dispDebug;
 
-aD = getAD;
-
-hAxesOfInterest = aD.hCurrentAxes;
-applyAll = aD.hGUI.Apply_radiobutton.Value;
-if applyAll
-    hAxesOfInterest = aD.hAllAxes;
-end;
-
-ImageRangeAll = getappdata(hAxesOfInterest, 'ImageRangeAll');
-minFrame  = str2double(aD.hGUI.Min_Frame_edit.String);
-maxFrame  = str2double(aD.hGUI.Max_Frame_edit.String);
-currFrame = str2double(aD.hGUI.Frame_Value_edit.String);
+fig2 = findobj('Tag', 'MV_figure');
+handlesMV = guidata(fig2);
+CurrentAxes = handlesMV.CurrentAxes;
+ImageRangeAll = getappdata(CurrentAxes, 'ImageRangeAll');
+minFrame  = str2num(get(handlesMV.Min_Frame_edit, 'String'));
+maxFrame  = str2num(get(handlesMV.Max_Frame_edit, 'String'));
+currFrame = str2num(get(handlesMV.Frame_Value_edit, 'String'));
+apply_all = get(handlesMV.Apply_radiobutton, 'Value');
 
 if minFrame < ImageRangeAll(1), minFrame = ImageRangeAll(1); end;
 if minFrame > currFrame       , minFrame = currFrame; end;
@@ -451,11 +448,15 @@ if minFrame > currFrame       , minFrame = currFrame; end;
 if maxFrame > ImageRangeAll(2), maxFrame = ImageRangeAll(2); end;
 if maxFrame < currFrame       , maxFrame = currFrame; end;
 
+% specify single or all axes
+if apply_all
+	CurrentAxes = handlesMV.Axes;
+end;
 
-for i = 1:length(hAxesOfInterest)
-	setappdata(hAxesOfInterest(i), 'ImageRange', [minFrame maxFrame]);
-	aD.hGUI.Min_Frame_edit.String = minFrame;
-	aD.hGUI.Max_Frame_edit.String = maxFrame;
+for i = 1:length(CurrentAxes)
+	setappdata(CurrentAxes(i), 'ImageRange', [minFrame maxFrame]);
+	set(handlesMV.Min_Frame_edit, 'String', minFrame);
+	set(handlesMV.Max_Frame_edit, 'String', maxFrame);
 end
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -467,22 +468,24 @@ function Reset_Frame_Limit
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 dispDebug;
 
-aD = getAD;
+fig2 = findobj('Tag', 'MV_figure');
+handlesMV = guidata(fig2);
+CurrentAxes = handlesMV.CurrentAxes;
+apply_all = get(handlesMV.Apply_radiobutton, 'Value');
 
-hCurrentAxes = aD.CurrentAxes;
-applyAll = aD.hGUI.Apply_radiobutton.Value;
-if applyAll
-	hCurrentAxes = aD.hAllAxes;
+% specify single or all axes
+if apply_all
+	CurrentAxes = handlesMV.Axes;
 end;
 
-for i = 1:length(hCurrentAxes)
-	ImageRangeAll = getappdata(hCurrentAxes(i), 'ImageRangeAll');
-	setappdata(hCurrentAxes(i), 'ImageRange',ImageRangeAll );
-	aD.hGUI.Min_Frame_edit.String =  num2str(ImageRangeAll(1)) ;
-	aD.hGUI.Max_Frame_edit.String =  num2str(ImageRangeAll(2)) ;
+for i = 1:length(CurrentAxes)
+	ImageRangeAll = getappdata(CurrentAxes(i), 'ImageRangeAll');
+	setappdata(CurrentAxes(i), 'ImageRange',ImageRangeAll );
+	set(handlesMV.Min_Frame_edit, 'String', num2str(ImageRangeAll(1)) );
+	set(handlesMV.Max_Frame_edit, 'String', num2str(ImageRangeAll(2)) );
 end;
 
-Set_Current_Axes(aD.hCurrentAxes);
+Set_Current_Axes(handlesMV.CurrentAxes);
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -708,8 +711,8 @@ if make_avi
 	try
 		movie2avi(M, f, 'FPS', frame_rate, 'Compression', compression, 'Quality', Q);
 	catch
-		disp('Error within movie2avi function call');
-		disp('  Movie was not created.');
+		disp(['Error within movie2avi function call']);
+		disp(['  Movie was not created.']);
 	end;
 end;	
 
